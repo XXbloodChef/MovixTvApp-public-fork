@@ -88,7 +88,19 @@ cd app && npm install && cd ..
 cp .env.example .env    # puis renseigner les variables ci-dessous
 ```
 
-Variables utiles dans `.env` : `VITE_MAIN_API`, `VITE_PROXIES_EMBED_API`, `VITE_SITE_URL`, `VITE_TMDB_API_KEY`, et `VITE_DEV_ACCESS_CODE` (clé VIP personnelle, posée dans le stockage de la WebView en développement seulement — ne jamais la committer).
+### Configurer `.env`
+
+Le fichier `.env` est gitignoré : chaque poste le remplit. Les variables sont lues au build, donc relancer `npm run dev` ou `npm run tv` après modification. Les URL d'API doivent inclure `https://`.
+
+| Variable | Obligatoire | Valeur |
+|---|---|---|
+| `VITE_MAIN_API` | oui | `https://api.movix.men` (API distante, pas dans ce dépôt) |
+| `VITE_PROXIES_EMBED_API` | oui | `https://proxiesembed.movix.men` (extraction des hébergeurs) |
+| `VITE_TMDB_API_KEY` | oui | clé API TMDB v3, à créer sur themoviedb.org |
+| `VITE_DEV_ACCESS_CODE` | oui en développement | clé VIP personnelle, posée dans `localStorage['access_code']` de la WebView par `src/main.tsx` en dev seulement. Sans elle, l'API répond « VIP access required ». Ne jamais la committer. |
+| `VITE_SITE_URL` | oui | `http://localhost:3000` en développement, l'adresse HTTPS d'hébergement en production |
+
+Les autres entrées de `.env.example` (miroirs du service worker, Turnstile, régie, analytics) sont héritées du site web et peuvent rester vides.
 
 ### Lancer sur la TV
 
