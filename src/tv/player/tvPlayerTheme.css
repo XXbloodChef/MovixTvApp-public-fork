@@ -1,0 +1,87 @@
+/*
+ * Adaptation téléviseur du panneau de réglages du lecteur.
+ *
+ * Ce panneau est partagé avec le site souris : le réécrire aurait mis en jeu
+ * 2 000 lignes utilisées par tous les visiteurs. On surcharge donc depuis
+ * l'extérieur, sous deux conditions cumulées — la classe `movix-tv` posée sur
+ * <html> et le marqueur `[data-player-settings]`. Aucune de ces règles ne peut
+ * atteindre la version souris.
+ *
+ * Trois problèmes traités :
+ *  1. Le panneau ne montre que des états de SURVOL. À la télécommande il n'y a
+ *     pas de curseur : sans état de focus visible, on ne sait pas où l'on est.
+ *  2. Les tailles de texte sont calibrées pour un écran à 50 cm. Le viewport de
+ *     la TV fait 960 px de large pour une dalle regardée à trois mètres.
+ *  3. Les lignes sont trop serrées pour être visées confortablement.
+ */
+
+/* --- 1. Focus visible ---------------------------------------------------- */
+
+/*
+ * `:focus` et non `:focus-visible` : la navigation à la télécommande déplace le
+ * focus par programme, et Chromium ne considère pas toujours ces déplacements
+ * comme « visibles ». Ici tout focus mérite d'être montré.
+ */
+html.movix-tv [data-player-settings] button:focus,
+html.movix-tv [data-player-settings] [tabindex]:focus,
+html.movix-tv [data-player-settings] a:focus {
+  outline: 3px solid theme('colors.movix.red-bright');
+  outline-offset: 2px;
+  border-radius: 10px;
+  /* Le contour seul se perd sur une affiche claire : on ajoute un fond. */
+  background-color: rgb(255 59 71 / 0.18);
+}
+
+/* --- 2. Lisibilité à trois mètres ---------------------------------------- */
+
+/*
+ * Les classes utilitaires posent des tailles en dur ; on les remonte d'un cran.
+ * La spécificité (classe + attribut + classe) l'emporte sans `!important`, ce
+ * qui laisse les surcharges locales du composant continuer de fonctionner.
+ */
+html.movix-tv [data-player-settings] .text-xs {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+html.movix-tv [data-player-settings] .text-sm {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+html.movix-tv [data-player-settings] .text-base {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+html.movix-tv [data-player-settings] .text-lg {
+  font-size: 1.375rem;
+  line-height: 1.875rem;
+}
+
+/* Les libellés secondaires descendaient sous le seuil de lisibilité. */
+html.movix-tv [data-player-settings] .text-gray-400,
+html.movix-tv [data-player-settings] .text-gray-500 {
+  color: rgb(255 255 255 / 0.62);
+}
+
+/* --- 3. Densité ----------------------------------------------------------- */
+
+html.movix-tv [data-player-settings] button {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+/* Les onglets d'en-tête restent compacts : ils forment une rangée unique et
+   doivent tenir sans passer à la ligne. */
+html.movix-tv [data-player-settings] [data-settings-tab] {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+/*
+ * Le survol n'a aucun sens sans curseur, et ces règles entraient en conflit
+ * avec l'état de focus : une ligne pouvait paraître active sans l'être.
+ */
+@media (hover: none) {
+  html.movix-tv [data-player-settings] *:hover {
+    background-color: inherit;
+  }
+}

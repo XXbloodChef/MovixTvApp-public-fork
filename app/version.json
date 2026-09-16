@@ -1,0 +1,13 @@
+{
+  "version": "2.5.26",
+  "buildNumber": 35,
+  "apkUrl": "https://raw.githubusercontent.com/movixcorp/MovixOpenSource/main/app/movix-android.apk",
+  "apkSizeBytes": 72584113,
+  "apkSha256": "ea72bd438665fe195397e72a35c16dc5b300ffb359f37ab2b38225d03ac06b21",
+  "mandatory": false,
+  "releasedAt": "2026-08-31T00:00:00.000Z",
+  "releaseNotes": {
+    "fr": "Live TV : certaines chaînes (serveurs en IP nue) ne se lançaient pas dans l'app — le flux était refusé avant même de partir. C'est corrigé, elles se lisent à nouveau via le proxy intégré.",
+    "en": "Live TV: some channels (bare-IP servers) would not start in the app — the stream was rejected before it even left. Fixed, they play again through the built-in proxy."
+  }
+}
