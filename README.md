@@ -9,15 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="https://react.dev">React</a> |
-  <a href="https://vite.dev">Vite</a> |
-  <a href="https://www.typescriptlang.org">TypeScript</a> |
-  <a href="https://reactnative.dev">React Native</a> |
-  <a href="https://kotlinlang.org">Kotlin</a> |
-  <a href="https://www.android.com/tv/">Android TV</a>
-</p>
-
-<p align="center">
   <a href="https://react.dev">
     <img alt="React" src="https://img.shields.io/badge/React-149ECA?style=flat-square&logo=react&logoColor=white" />
   </a>
@@ -42,80 +33,207 @@
   <strong>Licence :</strong> Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) · <a href="./LICENSE">LICENSE</a>
 </p>
 
-Ce dépôt est un clone de [Movix](https://github.com/movixcorp/MovixOpenSource) consacré à **une seule chose : une application Android TV**. Il contient le site réduit à l'interface téléviseur et au lecteur, et le shell Android qui l'affiche. Le site web souris, les backends, les extensions navigateur, la WatchParty, iOS et Chromecast n'en font plus partie. Les services distants de Movix (API, proxy d'extraction) restent utilisés tels quels, avec une clé d'accès VIP.
+Movix TV est une application **Android TV pilotée à la télécommande**. Ce dépôt est un clone de [Movix](https://github.com/movixcorp/MovixOpenSource) réduit à cet usage. Il contient deux choses :
 
-Le projet a été optimisé sur un téléviseur de référence — Edenwood 4K, Android 11, WebView Chromium 152, viewport 960 × 540 — et s'adapte automatiquement à d'autres téléviseurs Android : mise à l'échelle du viewport et palier de performance mesuré (voir plus bas).
+- **le site** (`src/`) : l'interface téléviseur et le lecteur vidéo, en React ;
+- **le shell** (`app/`) : l'application Android qui affiche ce site dans une WebView, avec ses modules natifs.
+
+Les services distants de Movix (API, extraction des hébergeurs) sont utilisés tels quels, avec une clé d'accès VIP. Le site web souris, les backends, les extensions, la WatchParty, iOS et Chromecast ne font plus partie du dépôt.
+
+## Sommaire
+
+1. [Ce que fait l'application](#ce-que-fait-lapplication)
+2. [Comment ça marche](#comment-ça-marche)
+3. [Installation pas à pas](#installation-pas-à-pas)
+4. [Développer au quotidien](#développer-au-quotidien)
+5. [Dépannage](#dépannage)
+6. [Vérifier son travail](#vérifier-son-travail)
+7. [Adaptation à d'autres téléviseurs](#adaptation-à-dautres-téléviseurs)
+8. [Portage en APK autonome](#portage-en-apk-autonome)
+9. [Structure du dépôt](#structure-du-dépôt)
 
 ## Ce que fait l'application
 
-- **Une interface pensée pour trois mètres** : bannière, rangées d'affiches, pages Films, Séries et Animés, collections « Voir plus », fiche de détail, recherche au clavier virtuel, réglages. Tout se pilote au pavé directionnel, avec un moteur de focus qui raisonne par index plutôt que par géométrie.
+- **Une interface pensée pour trois mètres** : bannière, rangées d'affiches, pages Films, Séries et Animés, collections « Voir plus », fiche de détail, recherche au clavier virtuel, réglages. Tout se pilote au pavé directionnel.
 - **Le lecteur Movix, adapté à la télécommande** : barre de lecture, panneau de réglages en arborescence (sources, qualité, audio, sous-titres, vitesse, format), touches Lecture/Pause, avance et retour rapides, sauts de 10 s aux flèches, reprise de lecture, épisode suivant.
-- **Sous-titres** : décalage temporel, taille automatique pour la TV, pistes incrustées CEA-608 listées et activables, avec détection automatique de leur langue d'après le texte.
-- **Récupération des médias** : registre serveur Movix avec repli sur l'extraction locale embarquée (userscript) quand le serveur n'a pas de résultat.
-- **Bloqueur de publicités natif** dans la WebView (liste d'hôtes, règles par en-tête `Referer`, autorisation des scripts de même marque), débrayable depuis les réglages de l'interface TV.
-- **Shell Android** : proxy média natif (contournement CORS et en-têtes exigés par certains hébergeurs, moteur réseau Cronet), mise à jour d'APK intégrée, DNS Cloudflare optionnel, écran maintenu allumé pendant la lecture, image dans l'image.
+- **Sous-titres** : décalage temporel, taille automatique pour la TV, pistes incrustées CEA-608 listées et activables, avec détection automatique de leur langue.
+- **Récupération des médias** : registre serveur Movix, avec repli sur l'extraction locale embarquée (userscript) quand le serveur n'a pas de résultat.
+- **Bloqueur de publicités natif** dans la WebView, débrayable depuis les réglages de l'interface TV.
+- **Shell Android** : proxy média natif (contournement CORS, en-têtes exigés par certains hébergeurs), mise à jour d'APK intégrée, DNS Cloudflare optionnel, écran maintenu allumé pendant la lecture, image dans l'image.
 
-## Architecture
+## Comment ça marche
+
+En développement, la TV n'embarque pas le site : elle le charge depuis le poste de travail. Deux serveurs tournent sur le poste, et deux ponts `adb reverse` font croire à la TV que ces ports sont chez elle.
 
 ```
-src/                    site React 18 + Vite 5, servi dans la WebView
-  tv/                   interface téléviseur (/tvapp/*), moteur de focus, télécommande du lecteur
-  pages/Watch/          pages de lecture (/watch/movie, /watch/tv)
-  components/HLSPlayer  lecteur principal (hls.js) et son panneau de réglages TV
-app/                    shell React Native 0.75 (Android uniquement)
-  src/                  WebView, pont page <-> natif, scripts injectés, mise à jour d'APK
-  android/              modules Kotlin : bloqueur, proxy média, télécommande, mise à jour, DNS, PiP
-userscript/             source des extracteurs, générée dans le shell (npm run build:userscript)
-scripts/                environnement de dev TV (Vite + Metro + ponts adb), publication d'APK
+        POSTE DE TRAVAIL                              TÉLÉVISEUR
+  ┌──────────────────────────┐                 ┌──────────────────────────┐
+  │ Vite   :3000  (src/)     │◄── adb reverse ─┤ WebView → localhost:3000 │
+  │ Metro  :8081  (app/src/) │◄── adb reverse ─┤ Shell   → localhost:8081 │
+  └──────────────────────────┘                 └────────────┬─────────────┘
+                                                            │ https
+                                                            ▼
+                                          API Movix distante (clé VIP)
 ```
 
-En développement, la TV charge le site depuis le poste de travail : `adb reverse` fait pointer `localhost:3000` (Vite) et `localhost:8081` (Metro) de la TV vers le Mac. En production, le shell charge l'adresse configurée dans `app/src/config/index.ts`.
+| Serveur | Port | Sert | Lancé par |
+|---|---|---|---|
+| Vite | 3000 | le site (`src/`) affiché dans la WebView | `npm run dev` à la racine |
+| Metro | 8081 | le code JavaScript du shell (`app/src/`) | `npm start` dans `app/` |
 
-## Démarrage rapide
+La commande `npm run tv` lance les deux, pose les ponts et les surveille. C'est elle qu'on utilise au quotidien.
+
+En production, il n'y a plus ni Vite, ni Metro, ni ponts : le shell charge une adresse HTTPS fixe. Voir [Portage en APK autonome](#portage-en-apk-autonome).
+
+## Installation pas à pas
 
 ### Prérequis
 
-- Node.js 20 ou plus, npm
-- Android SDK avec `adb`, et un JDK 21 pour Gradle (à déclarer dans `~/.gradle/gradle.properties` via `org.gradle.java.home`)
-- Un téléviseur ou une box Android TV sur le même réseau, avec le débogage adb activé (`adb connect <ip>:5555`)
-- Une clé API TMDB et une clé d'accès VIP Movix
+- **Node.js 20** ou plus, avec npm.
+- **Android SDK** avec `adb` dans le `PATH`.
+- **JDK 21** pour Gradle, déclaré dans `~/.gradle/gradle.properties` :
+  ```properties
+  org.gradle.java.home=/chemin/vers/jdk-21
+  ```
+- **Un téléviseur ou une box Android TV** sur le même réseau que le poste.
+- **Une clé API TMDB** (gratuite, sur themoviedb.org) et **une clé d'accès VIP Movix**.
 
-### Installer
+### 1. Cloner et installer
 
 ```bash
-npm install
-cd app && npm install && cd ..
-cp .env.example .env    # puis renseigner les variables ci-dessous
+git clone https://github.com/TheLegendBlack/MovixTv.git
+cd MovixTv
+npm install                          # dépendances du site
+cd app
+npm install                          # dépendances du shell, applique aussi le patch react-native-webview
+npm run build:userscript             # génère src/injection/userscript-source.ts (fichier non versionné)
+cd ..
 ```
 
-### Configurer `.env`
+Les dossiers `node_modules/`, `dist/` et les `build/` Android ne sont pas versionnés : ces commandes les recréent.
 
-Le fichier `.env` est gitignoré : chaque poste le remplit. Les variables sont lues au build, donc relancer `npm run dev` ou `npm run tv` après modification. Les URL d'API doivent inclure `https://`.
+### 2. Configurer `.env`
+
+```bash
+cp .env.example .env
+```
+
+Le fichier `.env` est ignoré par git : chaque poste remplit le sien. Les URL d'API doivent inclure `https://`.
 
 | Variable | Obligatoire | Valeur |
 |---|---|---|
 | `VITE_MAIN_API` | oui | `https://api.movix.men` (API distante, pas dans ce dépôt) |
 | `VITE_PROXIES_EMBED_API` | oui | `https://proxiesembed.movix.men` (extraction des hébergeurs) |
-| `VITE_TMDB_API_KEY` | oui | clé API TMDB v3, à créer sur themoviedb.org |
-| `VITE_DEV_ACCESS_CODE` | oui en développement | clé VIP personnelle, posée dans `localStorage['access_code']` de la WebView par `src/main.tsx` en dev seulement. Sans elle, l'API répond « VIP access required ». Ne jamais la committer. |
+| `VITE_TMDB_API_KEY` | oui | clé API TMDB v3 |
+| `VITE_DEV_ACCESS_CODE` | oui en développement | clé VIP personnelle. Sans elle, l'API répond « VIP access required ». **Ne jamais la committer.** |
 | `VITE_SITE_URL` | oui | `http://localhost:3000` en développement, l'adresse HTTPS d'hébergement en production |
 
-Les autres entrées de `.env.example` (miroirs du service worker, Turnstile, régie, analytics) sont héritées du site web et peuvent rester vides.
+Les autres entrées de `.env.example` sont héritées du site web et restent vides. Les variables sont lues au démarrage de Vite : relancer `npm run tv` après une modification.
 
-### Lancer sur la TV
+La clé VIP est posée dans `localStorage['access_code']` de la WebView par `src/main.tsx`, en développement seulement.
+
+### 3. Préparer la TV
+
+1. Sur la TV, activer les options développeur : **Paramètres › À propos**, puis appuyer sept fois sur **Build**. Le libellé exact varie selon la marque.
+2. Dans **Options pour les développeurs**, activer le **débogage USB** (ou **débogage réseau**).
+3. Relever l'adresse IP de la TV dans **Paramètres › Réseau**.
+4. Depuis le poste, se connecter et accepter la demande d'autorisation qui s'affiche sur la TV :
 
 ```bash
-npm run tv              # Vite + Metro + ponts adb, relancés automatiquement s'ils tombent
-cd app && npm run android   # première installation de l'APK de développement
+adb connect <ip-de-la-tv>:5555
+adb devices                          # la TV doit apparaître avec l'état « device »
 ```
 
-Ensuite, toute modification de `src/` (site) ou `app/src/` (shell JavaScript) est prise à chaud. Seuls les changements sous `app/android/` (Kotlin, manifeste, Gradle) exigent de recompiler l'APK :
+### 4. Premier lancement
+
+Il faut deux terminaux, car `npm run tv` reste au premier plan.
 
 ```bash
-cd app/android && ./gradlew assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk
+# Terminal 1, à la racine : serveurs + ponts
+TV_ADDR=<ip-de-la-tv>:5555 npm run tv
+
+# Terminal 2 : compile et installe l'APK de développement (la première fois seulement)
+cd app && npm run android
 ```
 
-### Vérifier
+L'application s'ouvre sur la TV et affiche l'accueil. Les fois suivantes, le terminal 1 suffit.
+
+> `TV_ADDR` vaut `192.168.1.9:5555` par défaut. Pour ne plus le saisir, l'exporter dans son profil shell ou modifier la valeur par défaut dans `scripts/tv-dev-up.sh` et `scripts/tv-dev.sh`.
+
+## Développer au quotidien
+
+### La commande unique
+
+```bash
+npm run tv                           # Ctrl+C pour tout arrêter
+```
+
+Elle fait, dans l'ordre :
+
+1. démarre Vite (3000) et Metro (8081), ou réutilise ceux déjà lancés ;
+2. se connecte à la TV et pose les deux ponts `adb reverse` ;
+3. relance l'application sur la TV ;
+4. réaffirme les ponts toutes les dix secondes, et se reconnecte si la TV a disparu.
+
+Les journaux des deux serveurs sont dans `.tv-dev-logs/` (`vite.log`, `metro.log`). À l'arrêt, seuls les serveurs démarrés par le script sont coupés.
+
+### La méthode manuelle
+
+Équivalente, utile pour voir la sortie de chaque serveur dans son propre terminal :
+
+```bash
+adb connect <ip-de-la-tv>:5555
+adb reverse tcp:3000 tcp:3000        # pont du site
+adb reverse tcp:8081 tcp:8081        # pont du shell
+
+npm run dev                          # terminal 1, à la racine : Vite
+cd app && npm start                  # terminal 2 : Metro
+```
+
+Les ponts sont attachés à la connexion adb : ils tombent à chaque mise en veille de la TV ou coupure Wi-Fi. Le pont 8081 revient seul, **le pont 3000 jamais**. Pour les rétablir sans tout relancer :
+
+```bash
+./scripts/tv-dev.sh                  # rétablit les deux ponts
+./scripts/tv-dev.sh --restart        # rétablit, puis relance l'application
+```
+
+### Ce qui se recharge à chaud, ce qui exige un nouvel APK
+
+| Fichiers modifiés | Pris en compte par | Action |
+|---|---|---|
+| `src/**` (site) | Vite | rien, rechargement à chaud |
+| `app/src/**` (shell JavaScript) | Metro | rien, rechargement à chaud |
+| `userscript/movix.user.js` | génération | `cd app && npm run build:userscript` |
+| `app/android/**` (Kotlin, manifeste, Gradle) | Gradle | recompiler et réinstaller l'APK |
+
+```bash
+cd app/android && ./gradlew assembleDebug \
+  && adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Observer la TV depuis le poste
+
+```bash
+adb shell input keyevent KEYCODE_DPAD_DOWN        # simuler une touche de télécommande
+adb exec-out screencap -p > capture.png           # capture d'écran
+adb logcat -d | grep CONSOLE                      # console JavaScript du site
+```
+
+## Dépannage
+
+| Symptôme sur la TV | Cause | Remède |
+|---|---|---|
+| Écran « Movix injoignable » | le pont 3000 est tombé, ou Vite n'est pas lancé | `./scripts/tv-dev.sh --restart`, et vérifier que le port 3000 écoute |
+| Écran rouge « Unable to load script » | le pont 8081 est tombé, ou Metro n'est pas lancé | `./scripts/tv-dev.sh --restart`, et vérifier que le port 8081 écoute |
+| L'accueil reste vide, erreur « VIP access required » | `VITE_DEV_ACCESS_CODE` absent ou faux | corriger `.env`, relancer `npm run tv` |
+| Affiches absentes | `VITE_TMDB_API_KEY` absent ou invalide | corriger `.env`, relancer `npm run tv` |
+| `npm run tv` affiche « connexion impossible » | TV éteinte, mauvaise adresse, débogage inactif | vérifier `adb devices`, passer la bonne adresse dans `TV_ADDR` |
+| `adb devices` affiche « unauthorized » | autorisation non acceptée sur la TV | accepter la fenêtre sur la TV, sinon révoquer les autorisations de débogage et reconnecter |
+| Gradle échoue sur la version de Java | le JDK actif n'est pas le 21 | régler `org.gradle.java.home` dans `~/.gradle/gradle.properties` |
+| Le build du shell ne trouve pas `userscript-source` | fichier généré manquant sur un clone neuf | `cd app && npm run build:userscript` |
+| Un port est déjà occupé | un ancien Vite ou Metro tourne encore | `lsof -nP -iTCP:3000 -sTCP:LISTEN` (ou `8081`), puis arrêter le processus |
+
+## Vérifier son travail
 
 ```bash
 npm run build                                                   # build de production du site
@@ -132,42 +250,55 @@ echo '{ "extends": "./tsconfig.app.json", "compilerOptions": { "ignoreDeprecatio
   && npx tsc --noEmit -p tsconfig.check.json; rm -f tsconfig.check.json
 ```
 
-Il reste une soixantaine d'erreurs de type héritées du projet amont dans le lecteur et ses pages de lecture ; elles n'empêchent ni le build ni l'exécution.
+Le lecteur hérité du projet amont garde plusieurs dizaines d'erreurs de type et de lint. Elles n'empêchent ni le build ni l'exécution : comparer le compte avant et après une modification, sans viser zéro.
 
 ## Adaptation à d'autres téléviseurs
 
-- **Échelle de viewport** (`src/tv/tvScale.ts`) : l'interface est dessinée sur un gabarit de 960 × 540 pixels CSS. Sur un viewport différent, elle est mise à l'échelle par transformation ; sur le gabarit natif, rien n'est appliqué. Pour essayer une autre échelle : `?tvscale=0.8` dans l'adresse.
-- **Palier de performance** (`src/tv/devicePerformance.ts`) : les premières secondes de l'accueil sont chronométrées ; un appareil qui ne tient pas trente images par seconde passe en mode léger (animations coupées) au lancement suivant.
-- Les réglages de l'interface TV affichent le viewport, l'échelle et le palier mesurés ; la page `/tvapp/diag` mesure en direct.
+Le projet a été optimisé sur un téléviseur de référence : Edenwood 4K, Android 11, WebView Chromium 152, viewport CSS de 960 × 540. Deux mécanismes automatiques l'adaptent aux autres.
+
+- **Échelle de viewport** (`src/tv/tvScale.ts`) : l'interface est dessinée sur un gabarit de 960 × 540 pixels CSS. Sur un viewport différent, elle est mise à l'échelle par transformation. Sur le gabarit natif, rien n'est appliqué. Pour essayer une autre échelle, ajouter `?tvscale=0.8` à l'adresse.
+- **Palier de performance** (`src/tv/devicePerformance.ts`) : les premières secondes de l'accueil sont chronométrées. Un appareil qui ne tient pas trente images par seconde passe en mode léger, animations coupées, au lancement suivant.
+
+Les réglages de l'interface TV affichent le viewport, l'échelle et le palier mesurés. La page `/tvapp/diag` mesure en direct.
 
 ## Portage en APK autonome
 
-L'objectif final est une application installée sur le téléviseur qui tourne
-sans le poste de développement. **En l'état, la conversion peut être faite
-directement** : le build release du shell embarque le bundle JavaScript, les
-modules natifs sont finis, et le site se construit en une commande. Il reste
-deux décisions et quelques réglages, sans nouveau développement natif :
+L'objectif final est une application installée sur le téléviseur qui tourne sans le poste de développement. **C'est faisable en l'état, sans nouveau développement natif** : le build release embarque le code du shell, et le site se construit en une commande. Il reste trois étapes :
 
-1. construire le site (`npm run build`) et le servir en HTTPS avec repli SPA, sur un domaine à soi ;
-2. choisir comment la clé VIP arrive dans l'application : amorçage au build (simple, pour un site privé) ou écran de saisie dans les réglages TV (propre) ;
+1. construire le site (`npm run build`) et le servir en **HTTPS** avec repli SPA, sur un domaine à soi ;
+2. choisir comment la clé VIP arrive dans l'application : amorçage au build (simple, pour un site privé) ou écran de saisie dans les réglages TV ;
 3. pointer le shell vers cette adresse, neutraliser la mise à jour automatique qui vise le dépôt Movix, fixer le nom et la version, signer, construire `assembleRelease`, installer.
 
-La procédure détaillée, étape par étape avec les fichiers à modifier, est dans [app/README.md](app/README.md#portage-en-apk-autonome).
+La procédure détaillée, avec les fichiers à modifier, est dans [app/README.md](app/README.md#portage-en-apk-autonome).
 
-## Documentation
+## Structure du dépôt
 
-- [CLAUDE.md](CLAUDE.md) et [AGENTS.md](AGENTS.md) : guides pour les assistants de code, avec les règles de travail du projet.
-- [app/README.md](app/README.md) : le shell Android, son fonctionnement et la procédure de portage en APK autonome.
+```
+src/                    site React 18 + Vite 5, servi dans la WebView
+  tv/                   interface téléviseur (/tvapp/*), moteur de focus, télécommande du lecteur
+  pages/Watch/          pages de lecture (/watch/movie, /watch/tv)
+  components/HLSPlayer  lecteur principal (hls.js) et son panneau de réglages TV
+app/                    shell React Native 0.75 (Android uniquement)
+  src/                  WebView, pont page <-> natif, scripts injectés, mise à jour d'APK
+  android/              modules Kotlin : bloqueur, proxy média, télécommande, mise à jour, DNS, PiP
+userscript/             source des extracteurs, générée dans le shell (npm run build:userscript)
+scripts/                tv-dev-up.sh (npm run tv), tv-dev.sh (ponts), publish-app.mjs (publication d'APK)
+```
+
+Pour aller plus loin :
+
+- [app/README.md](app/README.md) : le shell Android, son fonctionnement, le portage en APK autonome.
 - [userscript/README.md](userscript/README.md) : le userscript d'extraction.
 - [src/README.md](src/README.md) : notes du frontend amont.
+- [CLAUDE.md](CLAUDE.md) et [AGENTS.md](AGENTS.md) : guides pour les assistants de code, avec les règles de travail du projet.
 
-## Ce qui a été retiré, et où le retrouver
+### Ce qui a été retiré
 
-Le nettoyage du 15/09/2026 a déplacé, sans les effacer, les backends, les extensions, la WatchParty, le site souris, iOS et Chromecast dans `.tv-backup/` (dossiers `suppression-2026-09-15*`, avec un README de restauration chacun). Ce dossier n'est référencé par aucun code et peut être supprimé une fois l'application validée à l'usage.
+Le nettoyage du 15/09/2026 a déplacé, sans les effacer, les backends, les extensions, la WatchParty, le site souris, iOS et Chromecast dans un dossier local `.tv-backup/`. Ce dossier est volumineux et **n'est pas versionné** : il n'existe que sur le poste d'origine. Aucun code ne le référence.
 
 ## Licence et crédits
 
-Ce projet dérive de Movix et reste distribué sous licence Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). Le texte complet est disponible dans [LICENSE](LICENSE). L'utilisation de ce code implique le maintien des crédits et l'interdiction stricte de le monétiser : aucune publicité, aucun abonnement.
+Ce projet dérive de Movix et reste distribué sous licence Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). Le texte complet est dans [LICENSE](LICENSE). L'utilisation de ce code implique le maintien des crédits et l'interdiction stricte de le monétiser : aucune publicité, aucun abonnement.
 
 ## Avertissement
 
