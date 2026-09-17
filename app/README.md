@@ -71,6 +71,11 @@ adb connect <ip-de-la-tv>:5555
 npm run android             # build debug + installation
 ```
 
+Sur un clone neuf, créer d'abord `android/local.properties` avec la ligne
+`sdk.dir=<chemin du SDK Android>` : ce fichier n'est pas versionné, et Gradle
+échoue sans lui (« SDK location not found »). Le détail par système est dans le
+[README racine](../README.md#1-cloner-et-installer).
+
 Le plus simple ensuite est `npm run tv` depuis la racine : il lance Vite, Metro
 et les ponts `adb reverse`, et les relance quand la connexion adb tombe. Les
 modifications de `src/` (site) et `app/src/` (shell) sont prises à chaud ;

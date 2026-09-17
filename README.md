@@ -90,13 +90,19 @@ En production, il n'y a plus ni Vite, ni Metro, ni ponts : le shell charge une a
 ### Prérequis
 
 - **Node.js 20** ou plus, avec npm.
-- **Android SDK** avec `adb` dans le `PATH`.
+- **Android SDK**, le plus simple étant d'installer [Android Studio](https://developer.android.com/studio). Dans son *SDK Manager*, cocher :
+  - Android SDK Platform **35** ;
+  - Android SDK Build-Tools **35.0.0** ;
+  - NDK **26.1.10909125** (onglet *SDK Tools*, case *Show Package Details*) ;
+  - Android SDK Platform-Tools, qui fournit `adb`. Ajouter son dossier au `PATH`.
 - **JDK 21** pour Gradle, déclaré dans `~/.gradle/gradle.properties` :
   ```properties
   org.gradle.java.home=/chemin/vers/jdk-21
   ```
 - **Un téléviseur ou une box Android TV** sur le même réseau que le poste.
-- **Une clé API TMDB** (gratuite, sur themoviedb.org) et **une clé d'accès VIP Movix**.
+- **Une clé API TMDB** (gratuite, sur themoviedb.org) et **une clé d'accès VIP Movix**. Ce dépôt n'en fournit aucune : sans clé VIP, l'API distante refuse les requêtes.
+
+Le projet est développé sous macOS. Sous Linux tout fonctionne à l'identique. Sous Windows, `npm run tv` et `scripts/tv-dev.sh` sont des scripts bash : passer par WSL, ou utiliser [la méthode manuelle](#la-méthode-manuelle) qui ne dépend d'aucun script.
 
 ### 1. Cloner et installer
 
@@ -109,6 +115,23 @@ npm install                          # dépendances du shell, applique aussi le 
 npm run build:userscript             # génère src/injection/userscript-source.ts (fichier non versionné)
 cd ..
 ```
+
+Pendant le `npm install` du shell, vérifier que la sortie contient bien cette ligne. Elle prouve que le patch du bloqueur de publicités est appliqué :
+
+```
+react-native-webview@13.16.1 ✔
+```
+
+Indiquer ensuite à Gradle où se trouve le SDK Android. Ce fichier est propre à chaque poste et n'est pas versionné :
+
+```bash
+# macOS
+echo "sdk.dir=$HOME/Library/Android/sdk" > app/android/local.properties
+# Linux
+echo "sdk.dir=$HOME/Android/Sdk" > app/android/local.properties
+```
+
+Sous Windows, le chemin habituel est `C:/Users/<nom>/AppData/Local/Android/Sdk`, à écrire avec des barres obliques. Définir la variable d'environnement `ANDROID_HOME` sur ce même chemin fonctionne aussi.
 
 Les dossiers `node_modules/`, `dist/` et les `build/` Android ne sont pas versionnés : ces commandes les recréent.
 
@@ -229,6 +252,10 @@ adb logcat -d | grep CONSOLE                      # console JavaScript du site
 | Affiches absentes | `VITE_TMDB_API_KEY` absent ou invalide | corriger `.env`, relancer `npm run tv` |
 | `npm run tv` affiche « connexion impossible » | TV éteinte, mauvaise adresse, débogage inactif | vérifier `adb devices`, passer la bonne adresse dans `TV_ADDR` |
 | `adb devices` affiche « unauthorized » | autorisation non acceptée sur la TV | accepter la fenêtre sur la TV, sinon révoquer les autorisations de débogage et reconnecter |
+| Gradle échoue avec « SDK location not found » | `app/android/local.properties` absent | le créer avec la ligne `sdk.dir=…`, voir [l'étape 1](#1-cloner-et-installer) |
+| Gradle réclame une plateforme, des build-tools ou un NDK | composant du SDK non installé | l'installer depuis le *SDK Manager* d'Android Studio, voir [les prérequis](#prérequis) |
+| `npm install` du shell affiche « Failed to apply patch » | `node_modules` dans un état intermédiaire | `cd app && rm -rf node_modules && npm install` |
+| `npm run android` hésite entre plusieurs appareils | un émulateur ou un téléphone est aussi connecté | ne garder que la TV dans `adb devices` : fermer l'émulateur, débrancher le téléphone |
 | Gradle échoue sur la version de Java | le JDK actif n'est pas le 21 | régler `org.gradle.java.home` dans `~/.gradle/gradle.properties` |
 | Le build du shell ne trouve pas `userscript-source` | fichier généré manquant sur un clone neuf | `cd app && npm run build:userscript` |
 | Un port est déjà occupé | un ancien Vite ou Metro tourne encore | `lsof -nP -iTCP:3000 -sTCP:LISTEN` (ou `8081`), puis arrêter le processus |

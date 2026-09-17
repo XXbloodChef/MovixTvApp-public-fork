@@ -160,7 +160,7 @@ index f134e5b..a7a7635 100644
      protected RNCWebView.ProgressChangedFilter progressChangedFilter = null;
      protected @Nullable RNCBasicAuthCredential basicAuthCredential = null;
  
-@@ -274,6 +286,17 @@ public class RNCWebViewClient extends WebViewClient {
+@@ -274,5 +286,17 @@ public class RNCWebViewClient extends WebViewClient {
          }
      }
  
@@ -175,6 +175,6 @@ index f134e5b..a7a7635 100644
 +        }
 +        return super.shouldInterceptRequest(view, request);
 +    }
- 
++
      @TargetApi(Build.VERSION_CODES.O)
      @Override
