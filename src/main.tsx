@@ -26,37 +26,30 @@ if (isTvDevice()) {
   document.documentElement.classList.add('movix-tv');
 }
 
-// Amorçage de la clé VIP en développement.
+// Amorçage facultatif de la clé VIP.
 //
-// La clé vit dans localStorage, pas dans la configuration : elle se saisit
-// normalement dans le formulaire de code d'accès du site. Sur téléviseur, la
-// taper à la télécommande est impraticable tant qu'il n'y a pas de clavier à
-// l'écran — et le stockage de la WebView est distinct de celui du navigateur du
-// poste de dev, donc la saisir sur l'ordinateur ne la transmet pas.
+// En développement, VITE_DEV_ACCESS_CODE évite de saisir la clé à la
+// télécommande. Pour les builds personnels non distribués,
+// VITE_PERSONAL_ACCESS_CODE offre le même amorçage en production.
 //
-// `import.meta.env.DEV` vaut false dans un build de production : Vite élimine
-// ce bloc entièrement, la clé n'est jamais embarquée dans le bundle publié.
-// Une valeur déjà présente n'est jamais écrasée.
-if (import.meta.env.DEV) {
-  const devAccessCode = import.meta.env.VITE_DEV_ACCESS_CODE;
-  if (devAccessCode && !localStorage.getItem('access_code')) {
-    localStorage.setItem('access_code', devAccessCode);
-  }
+// ATTENTION : toute variable VITE_* est intégrée au JavaScript final. Le mode
+// personnel privilégie l'installation rapide, pas le secret contre quelqu'un
+// qui extrait l'APK. Ne jamais utiliser VITE_PERSONAL_ACCESS_CODE dans une
+// version publique ; le futur mode public passera par la saisie sécurisée du
+// compte ou du code propre à chaque utilisateur.
+const bundledAccessCode =
+  import.meta.env.VITE_PERSONAL_ACCESS_CODE ||
+  (import.meta.env.DEV ? import.meta.env.VITE_DEV_ACCESS_CODE : '');
 
-  // `is_vip` s'amorce avec la clé, et pas seulement après le contrôle serveur.
-  //
-  // `isUserVip()` lit cette entrée de façon synchrone et ne l'amorce jamais :
-  // elle n'est écrite qu'au retour de `checkVipStatus()`, un aller-retour
-  // réseau. Or une dizaine d'extracteurs abandonnent immédiatement quand elle
-  // est absente, et l'origine `localhost:3000` du téléviseur a son propre
-  // stockage, froid à chaque purge.
-  //
-  // Optimiste et non autoritaire : `checkVipStatus()` part au montage de
-  // `ProfileContext` et appelle `revokeVipStatus()` — qui retire cette même
-  // entrée — si le serveur refuse la clé.
-  if (devAccessCode && !localStorage.getItem('is_vip')) {
-    localStorage.setItem('is_vip', 'true');
-  }
+if (bundledAccessCode && !localStorage.getItem('access_code')) {
+  localStorage.setItem('access_code', bundledAccessCode);
+}
+
+// `is_vip` s'amorce avec la clé, et pas seulement après le contrôle serveur.
+// `checkVipStatus()` corrige ensuite cet état optimiste et le révoque si le
+// serveur refuse la clé.
+if (bundledAccessCode && !localStorage.getItem('is_vip')) {
+  localStorage.setItem('is_vip', 'true');
 }
 
 // Coins carrés (Paramètres > Apparence) : posé avant le premier render pour
