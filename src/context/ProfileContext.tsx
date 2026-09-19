@@ -18,6 +18,7 @@ import {
   createLatestProfileIntentGuard,
 } from '../utils/profileSelectionTransaction';
 import { replaceProfileStorage } from '../utils/profileStorage';
+import { MAIN_API } from '../config/runtime';
 
 // Pending sync ops persisted by App.tsx flushPendingOpsSync at unload time.
 // We POST these to /api/sync BEFORE replaceProfileStorage wipes
@@ -153,7 +154,7 @@ async function replayOutboxIfAny(): Promise<void> {
   }
 }
 
-const API_URL = import.meta.env.VITE_MAIN_API;
+const API_URL = MAIN_API;
 
 // Per-device record of which profiles have been confirmed to hold server-side
 // data on a prior load. Used by loadProfileData to detect the "server returned

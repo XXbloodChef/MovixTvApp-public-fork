@@ -1,16 +1,10 @@
-import { NativeModules, Platform } from 'react-native';
-
-interface DeviceInfoNativeModule {
-  isTv?: boolean;
-}
+import { Platform } from 'react-native';
 
 /**
- * Vrai sur Android TV / box leanback.
+ * Ce shell Android est exclusivement destiné aux téléviseurs.
  *
- * Lu depuis getConstants() du module natif, donc disponible synchronement dès le
- * premier rendu : le User-Agent de la WebView en dépend et ne peut pas attendre
- * un aller-retour de bridge.
+ * Ne pas dépendre des drapeaux `FEATURE_LEANBACK` du constructeur : plusieurs
+ * firmwares TCL/Philips incomplets ne les déclarent pas et feraient alors
+ * charger la version téléphone du site. iOS conserve son comportement mobile.
  */
-export const IS_TV: boolean =
-  Platform.OS === 'android' &&
-  (NativeModules.MovixDeviceInfo as DeviceInfoNativeModule | undefined)?.isTv === true;
+export const IS_TV: boolean = Platform.OS === 'android';

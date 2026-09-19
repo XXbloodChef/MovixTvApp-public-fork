@@ -1,14 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import ErrorBoundary from './components/ErrorBoundary'
-import './i18n' // Initialize i18n before App
-import App from './App.tsx'
 import axios from 'axios'
-import { installHttpCache } from './utils/httpCache'
-import { installSegmentedSeasons } from './utils/segmentedSeasons'
 import './index.css'
 import './styles/light-mode.css'
 import { isTvDevice } from './utils/tv/isTvDevice'
+import { initializeRuntimeConfig } from './config/runtime'
 
 // Point d'entrée du site téléviseur.
 //
@@ -58,18 +55,6 @@ if (localStorage.getItem('square_corners_enabled') === '1') {
   document.documentElement.classList.add('square-corners');
 }
 
-// Cache des lectures de catalogue (TMDB, /api/content) : une réponse déjà vue
-// est resservie sans réseau, et rafraîchie en arrière-plan si elle a vieilli.
-// Voir `utils/httpCache.ts` pour ce qui est mis en cache — et surtout pour ce
-// qui ne l'est jamais.
-installHttpCache(axios)
-
-// Séries que TMDB découpe en segments de 11 minutes (« Bienvenue chez les
-// Loud ») : les épisodes sont recollés à la volée pour coller aux fichiers.
-// Posé APRÈS le cache — celui-ci stocke la réponse TMDB brute, la fusion
-// s'applique à chaque lecture. Voir `utils/segmentedSeasons.ts`.
-installSegmentedSeasons(axios)
-
 // Garde contre le plantage React + traduction navigateur (Google Translate,
 // Edge, Samsung Internet, …) : le moteur de traduction remplace des nœuds texte
 // sous React, dont le réconciliateur appelle ensuite removeChild / insertBefore
@@ -99,10 +84,34 @@ if (typeof Node === 'function' && Node.prototype) {
   };
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>
-);
+async function bootstrap() {
+  // Le portail et les miroirs sont testés avant d'évaluer App.tsx. Tous les
+  // modules qui importent MAIN_API/PROXIES_EMBED_API reçoivent ainsi les bases
+  // actives, au lieu de figer api.movix.men pour toute la durée du processus.
+  await initializeRuntimeConfig();
+
+  const [{ installHttpCache }, { installSegmentedSeasons }] = await Promise.all([
+    import('./utils/httpCache'),
+    import('./utils/segmentedSeasons'),
+  ]);
+
+  // Cache des lectures de catalogue (TMDB, /api/content), puis fusion des
+  // séries segmentées. L'ordre historique est conservé.
+  installHttpCache(axios);
+  installSegmentedSeasons(axios);
+
+  // i18n importe aussi le cache HTTP ; il doit donc être évalué après la
+  // résolution des domaines et avant App.tsx, comme dans l'ordre historique.
+  await import('./i18n');
+  const { default: App } = await import('./App.tsx');
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </StrictMode>
+  );
+}
+
+void bootstrap();

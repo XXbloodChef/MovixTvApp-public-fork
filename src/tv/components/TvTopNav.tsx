@@ -9,8 +9,8 @@ import { TV_SAFE_X } from './TvRow';
  * Barre de navigation horizontale, dans l'esprit de Netflix.
  *
  * La loupe puis les quatre entrées de catalogue forment un groupe **centré sur
- * l'écran**, comme chez Netflix ; la roue crantée des réglages est seule à
- * droite, contre la marge. Le centrage compense la place que prend la roue :
+ * l'écran**, comme chez Netflix ; le profil et la roue des réglages restent à
+ * droite, contre la marge. Le centrage compense la place de ces deux actions :
  * l'axe du groupe est celui de la dalle, pas celui de l'espace qui reste. Pas
  * de logo dans la bande : celle de Netflix n'en porte pas non plus.
  *
@@ -51,17 +51,17 @@ import { TV_SAFE_X } from './TvRow';
  *
  * La barre porte en permanence le groupe sous ses deux formes, texte centré et
  * icônes à gauche, l'une dans le flux et enregistrée auprès du moteur, l'autre
- * en doublure absolue par-dessus, décorative, qui recopie le focus. La roue,
- * déjà un glyphe et toujours à la même place, reste en dehors. La
+ * en doublure absolue par-dessus, décorative, qui recopie le focus. Les deux
+ * actions de droite, déjà des glyphes, restent en dehors. La
  * transformation est **une sortie puis une entrée** : la forme courante
  * s'efface en glissant, et la suivante n'apparaît qu'une fois la première
  * partie. Un fondu croisé montrait les deux à la fois. Rien d'autre que
  * l'opacité et `transform` ne bouge.
  *
- * Sur la recherche, la roue passe **sous** le bandeau de prévisualisation tant
+ * Sur la recherche, les actions passent **sous** le bandeau de prévisualisation tant
  * que le focus est dans la grille des résultats : le bandeau est opaque et
  * au-dessus, la barre n'est de toute façon pas atteignable à ce moment-là, et
- * la roue réapparaît avec lui quand on remonte.
+ * elles réapparaissent avec lui quand on remonte.
  */
 
 /**
@@ -77,18 +77,20 @@ const GROUP = [
   { label: 'Animés', path: '/tvapp/animes', icon: 'anime', glyph: false },
 ] as const;
 
-/** La roue crantée, seule à droite, hors de la transformation. */
+/** Les actions fixes à droite, hors de la transformation. */
+const PROFILES = { label: 'Profils', path: '/tvapp/profiles', icon: 'profile' } as const;
 const SETTINGS = { label: 'Paramètres', path: '/tvapp/settings', icon: 'gear' } as const;
 
-type NavIcon = (typeof GROUP)[number]['icon'] | typeof SETTINGS.icon;
+type NavIcon = (typeof GROUP)[number]['icon'] | typeof PROFILES.icon | typeof SETTINGS.icon;
 
 /**
- * Index dans la portée : le groupe dans son ordre, la roue en dernier. Le
+ * Index dans la portée : le groupe dans son ordre, puis profil et réglages. Le
  * moteur navigue par index, donc Droite depuis « Animés » atteint la roue même
  * si un demi-écran les sépare.
  */
-const SETTINGS_INDEX = GROUP.length;
-const NAV_COUNT = GROUP.length + 1;
+const PROFILES_INDEX = GROUP.length;
+const SETTINGS_INDEX = GROUP.length + 1;
+const NAV_COUNT = GROUP.length + 2;
 const HOME_INDEX = GROUP.findIndex(entry => entry.path === '/tvapp');
 
 /** La seule page dont la barre est repliée. */
@@ -111,11 +113,10 @@ const ICON_SIZE = 22;
 /** Entre deux pastilles, et entre le groupe et la roue. */
 const PILL_GAP = 4;
 /**
- * Ce que la roue occupe à droite, espacement compris. Le groupe centré le
- * reçoit en marge gauche : sans ça il serait au milieu de ce que la roue
- * laisse, soit 20 px à gauche du milieu de la dalle.
+ * Ce que les deux actions occupent à droite, espacement compris. Le groupe
+ * centré le reçoit en marge gauche pour rester sur l'axe de la dalle.
  */
-const SETTINGS_FOOTPRINT = PILL_HEIGHT + PILL_GAP;
+const ACTIONS_FOOTPRINT = PILL_HEIGHT * 2 + PILL_GAP * 2;
 
 interface TvTopNavProps {
   transparent?: boolean;
@@ -176,7 +177,13 @@ export const TvTopNav: React.FC<TvTopNavProps> = ({
   // aujourd'hui — retomberait sur l'accueil plutôt que sur la loupe.
   const groupIndex = GROUP.findIndex(entry => entry.path === currentPath);
   const currentIndex =
-    currentPath === SETTINGS.path ? SETTINGS_INDEX : groupIndex === -1 ? HOME_INDEX : groupIndex;
+    currentPath === PROFILES.path
+      ? PROFILES_INDEX
+      : currentPath === SETTINGS.path
+        ? SETTINGS_INDEX
+        : groupIndex === -1
+          ? HOME_INDEX
+          : groupIndex;
 
   // Repliée d'entrée sur la recherche : la transformation a déjà eu lieu sur
   // la page précédente.
@@ -207,7 +214,7 @@ export const TvTopNav: React.FC<TvTopNavProps> = ({
   );
 
   // La portée englobe le groupe et la roue : le moteur enregistre chaque
-  // pastille par son index, la géométrie entre les deux ne le regarde pas.
+  // pastille par son index, la géométrie entre les blocs ne le regarde pas.
   const scopeRef = useFocusScope({
     id: TV_TOP_NAV_SCOPE,
     orientation: 'row',
@@ -259,7 +266,7 @@ export const TvTopNav: React.FC<TvTopNavProps> = ({
         ref={scopeRef}
         className="flex min-w-0 flex-1 items-center"
         style={{ gap: PILL_GAP }}>
-        {/* Toute la largeur qui reste à gauche de la roue. Le groupe s'y centre
+        {/* Toute la largeur qui reste à gauche des actions. Le groupe s'y centre
             ou s'y range à gauche selon sa forme ; la doublure s'y pose en absolu
             avec le même alignement, donc à la géométrie exacte du réel. */}
         <div className="relative min-w-0 flex-1">
@@ -280,6 +287,15 @@ export const TvTopNav: React.FC<TvTopNavProps> = ({
             onSelect={select}
           />
         </div>
+
+        <TvNavItem
+          index={PROFILES_INDEX}
+          label={PROFILES.label}
+          icon={PROFILES.icon}
+          active={currentPath === PROFILES.path}
+          onFocusEnter={onFocusEnter}
+          onSelect={() => select(PROFILES.path)}
+        />
 
         <TvNavItem
           index={SETTINGS_INDEX}
@@ -323,7 +339,7 @@ const TvNavGroup: React.FC<{
     style={{
       ...style,
       gap: PILL_GAP,
-      paddingLeft: kind === 'text' ? SETTINGS_FOOTPRINT : 0,
+      paddingLeft: kind === 'text' ? ACTIONS_FOOTPRINT : 0,
     }}>
     {real ? (
       GROUP.map((entry, index) => (
@@ -461,6 +477,12 @@ const TvNavIcon: React.FC<{ name: NavIcon }> = ({ name }) => (
       <>
         <circle cx="12" cy="12" r="3" />
         <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
+      </>
+    )}
+    {name === 'profile' && (
+      <>
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 21c.5-4.2 3-6.5 7-6.5s6.5 2.3 7 6.5" />
       </>
     )}
   </svg>

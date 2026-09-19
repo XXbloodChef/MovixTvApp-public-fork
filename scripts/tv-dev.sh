@@ -16,7 +16,7 @@
 set -euo pipefail
 
 TV_ADDR="${TV_ADDR:-192.168.1.9:5555}"
-PACKAGE="com.movix.app"
+PACKAGE="com.xxbloodchef.movixtv"
 PORTS=(3000 8081)
 
 ADB="${ADB:-adb}"

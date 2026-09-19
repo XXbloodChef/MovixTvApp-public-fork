@@ -6,13 +6,20 @@ import android.view.KeyEvent
  * Traduit les keycodes de télécommande TV en noms d'actions consommables par le
  * site dans la WebView.
  *
- * Ne mappe QUE les touches que la WebView ne reçoit pas déjà toute seule.
- * Les flèches directionnelles, Enter/Center et Back sont converties nativement
- * par Chromium en `keydown` (ArrowUp/…/Enter) et en navigation d'historique :
- * les intercepter ici casserait la navigation spatiale de la page.
+ * Les flèches sont relayées par le shell même si Chromium sait normalement les
+ * convertir. Dès qu'une iframe cross-origin prend le focus, ses événements ne
+ * remontent plus au document Movix : le lecteur tiers change alors son volume
+ * ou son seek et notre menu Sources devient inaccessible. MainActivity avale
+ * donc les quatre flèches et le shim les recrée dans la frame principale.
+ * Enter/Center et Back restent natifs : OK doit encore pouvoir lancer un
+ * lecteur externe, et Retour possède sa négociation dédiée.
  */
 object TvRemoteKeyMap {
     fun actionFor(keyCode: Int): String? = when (keyCode) {
+        KeyEvent.KEYCODE_DPAD_UP -> "dpadup"
+        KeyEvent.KEYCODE_DPAD_DOWN -> "dpaddown"
+        KeyEvent.KEYCODE_DPAD_LEFT -> "dpadleft"
+        KeyEvent.KEYCODE_DPAD_RIGHT -> "dpadright"
         KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> "playpause"
         KeyEvent.KEYCODE_MEDIA_PLAY -> "play"
         KeyEvent.KEYCODE_MEDIA_PAUSE -> "pause"

@@ -45,15 +45,57 @@ function isValidReleaseNotes(obj: unknown): obj is ReleaseNotes {
   return typeof r.fr === 'string' && typeof r.en === 'string';
 }
 
-function isValidManifest(obj: unknown): obj is Manifest {
+function trustedRepositoryUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const expected = new URL(UPDATE_CHECK.REPOSITORY_URL);
+    if (
+      url.protocol !== 'https:' ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.origin !== expected.origin ||
+      url.pathname.replace(/\/+$/, '') !== expected.pathname.replace(/\/+$/, '')
+    ) {
+      return null;
+    }
+    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+  } catch {
+    return null;
+  }
+}
+
+function isTrustedReleaseApkUrl(value: unknown, repositoryUrl: string): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const apk = new URL(value);
+    const repository = new URL(repositoryUrl);
+    const releasePrefix = `${repository.pathname.replace(/\/+$/, '')}/releases/download/`;
+    return (
+      apk.protocol === 'https:' &&
+      !apk.username &&
+      !apk.password &&
+      !apk.search &&
+      !apk.hash &&
+      apk.origin === repository.origin &&
+      apk.pathname.startsWith(releasePrefix) &&
+      apk.pathname.toLowerCase().endsWith('.apk') &&
+      apk.pathname.length > releasePrefix.length + 4
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isValidManifest(obj: unknown, repositoryUrl: string): obj is Manifest {
   if (typeof obj !== 'object' || obj === null) return false;
   const m = obj as Record<string, unknown>;
   return (
     typeof m.version === 'string' &&
     typeof m.buildNumber === 'number' &&
     Number.isInteger(m.buildNumber) &&
-    typeof m.apkUrl === 'string' &&
-    m.apkUrl.startsWith('https://') &&
+    isTrustedReleaseApkUrl(m.apkUrl, repositoryUrl) &&
     typeof m.apkSizeBytes === 'number' &&
     Number.isInteger(m.apkSizeBytes) &&
     m.apkSizeBytes > 0 &&
@@ -68,16 +110,25 @@ function isValidManifest(obj: unknown): obj is Manifest {
 export async function fetchLatestVersion(
   githubUrl: string,
 ): Promise<VersionCheckResult> {
+  // Le portail Movix publie lui aussi un champ GitHub. Il ne doit jamais
+  // pouvoir sélectionner le canal officiel et remplacer cette application TV
+  // par l'APK téléphone, même si un appelant lui transmet cette adresse.
+  const repositoryUrl = trustedRepositoryUrl(githubUrl);
+  if (!repositoryUrl) {
+    console.warn('[versionCheck] untrusted update repository');
+    return { kind: 'no-check' };
+  }
+
   let manifest: Manifest;
   try {
-    const manifestUrl = `${githubUrl}${UPDATE_CHECK.GITHUB_VERSION_RAW_PATH}?_=${Date.now()}`;
+    const manifestUrl = `${repositoryUrl}${UPDATE_CHECK.GITHUB_VERSION_RAW_PATH}?_=${Date.now()}`;
     const res = await fetchWithTimeout(manifestUrl, UPDATE_CHECK.TIMEOUT_MS);
     if (!res.ok) {
       console.warn('[versionCheck] manifest status', res.status);
       return { kind: 'no-check' };
     }
     const json: unknown = await res.json();
-    if (!isValidManifest(json)) {
+    if (!isValidManifest(json, repositoryUrl)) {
       console.warn('[versionCheck] manifest invalid', json);
       return { kind: 'no-check' };
     }

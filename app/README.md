@@ -145,19 +145,18 @@ et aligner `CONFIG.SITE_URL` et `FALLBACK_CONFIG.PRIMARY_URL` dans
 `src/config/index.ts`. Mettre `DEV_SITE_URL` à `null` n'est pas nécessaire :
 il est ignoré en release.
 
-### 5. Neutraliser ou reprendre la mise à jour automatique
+### 5. Publier les mises à jour de l'APK
 
-`src/App.tsx` vérifie `version.json` sur le dépôt GitHub de Movix
-(`FALLBACK_CONFIG.GITHUB_URL`) et proposerait d'installer l'APK amont
-par-dessus le vôtre. Soit forcer `updateSourceUrl = null`, soit publier votre
-propre `version.json` et votre APK (le script `npm run app:publish` à la racine
-fait le build release, calcule la somme SHA-256 et écrit le manifeste ; adapter
-`APK_URL` dans `scripts/publish-app.mjs` et `GITHUB_URL` dans la config).
+Le canal est verrouillé sur `XXbloodChef/MovixTvApp-Updates`. Le manifeste et
+l'URL de l'APK sont refusés s'ils ne viennent pas de ce dépôt ; le module natif
+refuse aussi tout APK dont le package n'est pas `com.xxbloodchef.movixtv`.
+`npm run app:publish` à la racine construit la release, calcule sa somme
+SHA-256 et produit `release/version.json` à publier avec l'APK.
 
 ### 6. Identité et version
 
 - Nom affiché : `app_name` dans `android/app/src/main/res/values/strings.xml` et `CONFIG.APP_NAME` (par exemple « Freedom »).
-- Identifiant : `applicationId` dans `android/app/build.gradle` (`com.movix.app`). Le changer permet de cohabiter avec l'application Movix officielle ; le garder permet d'installer par-dessus le build de développement actuel.
+- Identifiant : `com.xxbloodchef.movixtv`, distinct de l'application Movix officielle.
 - Version : `versionCode` et `versionName` dans le même fichier.
 
 ### 7. Signer
@@ -180,7 +179,7 @@ MOVIX_RELEASE_KEY_PASSWORD=…
 ```
 
 Changer de signature impose de désinstaller l'application en place
-(`adb uninstall com.movix.app`), ce qui efface le stockage de la WebView :
+(`adb uninstall com.xxbloodchef.movixtv`), ce qui efface le stockage de la WebView :
 progression de lecture, liste et clé VIP. À faire une fois, en connaissance de cause.
 
 ### 8. Construire et installer

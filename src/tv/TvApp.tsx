@@ -9,6 +9,7 @@ import TvSettings from './TvSettings';
 import TvMovies from './TvMovies';
 import TvSeries from './TvSeries';
 import TvAnimes from './TvAnimes';
+import TvProfiles from './TvProfiles';
 
 /**
  * Racine de l'interface téléviseur, montée sur `/tvapp/*`.
@@ -23,6 +24,7 @@ const TvApp: React.FC = () => (
       <Route path="/" element={<TvHome />} />
       <Route path="/search" element={<TvSearch />} />
       <Route path="/settings" element={<TvSettings />} />
+      <Route path="/profiles" element={<TvProfiles />} />
       <Route path="/movies" element={<TvMovies />} />
       <Route path="/series" element={<TvSeries />} />
       <Route path="/animes" element={<TvAnimes />} />

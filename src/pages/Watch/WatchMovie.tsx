@@ -40,7 +40,11 @@ import {
   resolveRenderedWatchSource,
   syncHlsActiveSource,
 } from '../../utils/hlsAutoFallbackGuard';
-const MAIN_API = import.meta.env.VITE_MAIN_API;
+import { MAIN_API } from '../../config/runtime';
+import {
+  isExternalPlayerSource,
+  useTvExternalPlayerRemote,
+} from '../../tv/player/useTvExternalPlayerRemote';
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || '';
 
 const normalizeUqloadEmbedUrl = (url: string): string => {
@@ -2661,6 +2665,20 @@ const WatchMovie: React.FC = () => {
       document.documentElement.style.height = '';
     };
   }, []);
+
+  const openExternalSources = useCallback(() => setShowEmbedQuality(true), []);
+  const exitExternalPlayer = useCallback(
+    () => navigate(`/movie/${id}`),
+    [id, navigate],
+  );
+  useTvExternalPlayerRemote({
+    enabled:
+      isTvDevice()
+      && !isLoading
+      && isExternalPlayerSource(selectedSource, embedUrl),
+    onOpenSources: openExternalSources,
+    onExit: exitExternalPlayer,
+  });
 
   // Age restriction blocking screen
   if (isBlocked) {

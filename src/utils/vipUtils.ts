@@ -7,7 +7,7 @@
  * 3. Fournit un header `x-access-key` pour toutes les requêtes API
  */
 
-const MAIN_API = import.meta.env.VITE_MAIN_API;
+import { MAIN_API } from '../config/runtime';
 
 // Intervalle de vérification : toutes les 10 minutes
 const VIP_CHECK_INTERVAL = 10 * 60 * 1000;

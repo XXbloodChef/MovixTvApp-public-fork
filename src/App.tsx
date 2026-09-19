@@ -18,6 +18,7 @@ import {
   pushPriorityToExtension,
   subscribeToPriorityChanges,
 } from './utils/sourcePriorityPrefs';
+import { MAIN_API } from './config/runtime';
 
 /**
  * Racine du site téléviseur.
@@ -37,8 +38,8 @@ startVipVerification();
 // Detect and set language on first visit (browser language + IP geolocation)
 detectInitialLanguage();
 
-// Get API URL from environment variable
-const API_URL = import.meta.env.VITE_MAIN_API
+// Base résolue au démarrage (portail officiel, cache, puis valeur du build).
+const API_URL = MAIN_API;
 const API_HOSTNAME = (() => {
   try {
     return API_URL ? new URL(API_URL).hostname : '';

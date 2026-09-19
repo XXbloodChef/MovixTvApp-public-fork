@@ -19,12 +19,19 @@ const PATHS = {
     REPO_ROOT,
     'app/android/app/build/outputs/apk/release/app-release.apk',
   ),
-  publishedApk: path.join(REPO_ROOT, 'app/movix-android.apk'),
-  manifest: path.join(REPO_ROOT, 'app/version.json'),
+  releaseDir: path.join(REPO_ROOT, 'release'),
+  manifest: path.join(REPO_ROOT, 'release/version.json'),
 };
 
-const APK_URL =
-  'https://github.com/Movix-STMG/MovixOpenSource/raw/refs/heads/main/app/movix-android.apk';
+const UPDATES_REPOSITORY = 'XXbloodChef/MovixTvApp-Updates';
+
+function apkFileName(versionName) {
+  return `movix-tv-${versionName}.apk`;
+}
+
+function apkDownloadUrl(versionName) {
+  return `https://github.com/${UPDATES_REPOSITORY}/releases/download/v${versionName}/${apkFileName(versionName)}`;
+}
 
 function die(msg) {
   console.error(`\n[publish-app] ${msg}\n`);
@@ -128,6 +135,7 @@ async function main() {
   }
 
   const { versionCode, versionName } = readBuildGradle();
+  const publishedApk = path.join(PATHS.releaseDir, apkFileName(versionName));
   const current = readCurrentManifest();
   if (current && typeof current.buildNumber === 'number' && versionCode <= current.buildNumber) {
     die(
@@ -160,20 +168,20 @@ async function main() {
     verifyApkSigned();
 
     log('6/7', 'Copie de l\'APK + hashes…');
-    fs.mkdirSync(path.dirname(PATHS.publishedApk), { recursive: true });
-    fs.copyFileSync(PATHS.apkOutput, PATHS.publishedApk);
-    const stat = fs.statSync(PATHS.publishedApk);
-    const sha = computeSha256(PATHS.publishedApk);
+    fs.mkdirSync(PATHS.releaseDir, { recursive: true });
+    fs.copyFileSync(PATHS.apkOutput, publishedApk);
+    const stat = fs.statSync(publishedApk);
+    const sha = computeSha256(publishedApk);
     console.log(
-      `  ✓ ${PATHS.publishedApk} (${(stat.size / (1024 * 1024)).toFixed(2)} MB)\n` +
+      `  ✓ ${publishedApk} (${(stat.size / (1024 * 1024)).toFixed(2)} MB)\n` +
         `  ✓ SHA256=${sha}`,
     );
 
-    log('7/7', 'Écriture de app/version.json…');
+    log('7/7', 'Écriture de release/version.json…');
     const manifest = {
       version: versionName,
       buildNumber: versionCode,
-      apkUrl: APK_URL,
+      apkUrl: apkDownloadUrl(versionName),
       apkSizeBytes: stat.size,
       apkSha256: sha,
       mandatory,
@@ -184,10 +192,11 @@ async function main() {
 
     console.log(
       '\n─────────────────────────────────────────────\n' +
-        '✓ Publish ready. Next steps:\n\n' +
-        '  git add app/version.json app/movix-android.apk app/android/app/build.gradle\n' +
-        `  git commit -m "release(app): v${versionName} (build ${versionCode})"\n` +
-        '  git push\n' +
+        '✓ Publication prête. Étapes dans MovixTvApp-Updates :\n\n' +
+        `  1. Créer la release v${versionName}\n` +
+        `  2. Joindre release/${apkFileName(versionName)} à cette release\n` +
+        '  3. Remplacer version.json à la racine par release/version.json\n' +
+        '  4. Publier version.json seulement après la fin de l’envoi de l’APK\n' +
         '─────────────────────────────────────────────\n',
     );
   } finally {

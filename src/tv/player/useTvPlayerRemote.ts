@@ -42,6 +42,7 @@ export interface UseTvPlayerRemoteOptions {
  * flèches partaient piloter la barre de lecture par-dessus la fenêtre ouverte.
  */
 const TV_DIALOGS = [
+  { root: '[data-tv-episode-menu]', close: '[data-tv-episode-menu-close]' },
   { root: '[data-source-menu]', close: '[data-source-menu-close]' },
   { root: '[data-player-settings]', close: '[data-player-settings-close]' },
 ] as const;
@@ -79,6 +80,33 @@ function openDialog(): { root: HTMLElement; close: string } | null {
       candidate => !matches.some(other => other !== candidate && other.root.contains(candidate.root)),
     ) ?? matches[0]
   );
+}
+
+/** Navigation partagée avec le lecteur iframe, qui n'a pas d'instance HLS. */
+export function navigateOpenTvDialog(event: KeyboardEvent): boolean {
+  const dialog = openDialog();
+  return dialog ? navigateDialog(event, dialog.root) : false;
+}
+
+/** Ferme la fenêtre TV la plus haute sans laisser Retour quitter la lecture. */
+export function closeOpenTvDialog(): boolean {
+  const dialog = openDialog();
+  if (!dialog) return false;
+  const closer =
+    document.querySelector<HTMLElement>(dialog.close) ??
+    TV_DIALOG_CLOSERS.map(selector => document.querySelector<HTMLElement>(selector))
+      .find((element): element is HTMLElement => element !== null) ??
+    // Les écrans Watch historiques rendent le bouton × autour du composant
+    // HLSPlayer `onlyQualityMenu`, donc hors de `[data-source-menu]`.
+    // Remonter au panneau fixe permet de le fermer sans dupliquer un marqueur
+    // dans chacune des nombreuses branches de rendu.
+    Array.from(
+      dialog.root.closest<HTMLElement>('.fixed')?.querySelectorAll<HTMLElement>('button') ?? [],
+    ).find(element => element.textContent?.trim() === '×') ??
+    null;
+  if (!closer) return false;
+  closer.click();
+  return true;
 }
 
 /** Tous les boutons de fermeture connus, pour le repli du Retour. */

@@ -398,3 +398,43 @@ test('l\'indicateur de saut annonce les secondes réelles, pas les appuis', asyn
   // La chrome souris reste intacte.
   assert.match(player, /<FastForward size=\{window\.innerWidth < 768 \? 44 : 52\}/);
 });
+
+test('les lecteurs iframe gardent les flèches dans l\'interface TV', async () => {
+  const [external, movie, tv, activity, keyMap, shim] = await Promise.all([
+    read('src/tv/player/useTvExternalPlayerRemote.ts'),
+    read('src/pages/Watch/WatchMovie.tsx'),
+    read('src/pages/Watch/WatchTv.tsx'),
+    read('app/android/app/src/main/java/com/movix/app/MainActivity.kt'),
+    read('app/android/app/src/main/java/com/movix/app/device/TvRemoteKeyMap.kt'),
+    read('app/src/injection/tv-shim.ts'),
+  ]);
+
+  // L'activité avale les flèches même quand l'iframe cross-origin a le focus,
+  // puis le shim les recrée dans le document Movix.
+  assert.match(activity, /override fun dispatchKeyEvent/);
+  for (const action of ['dpadup', 'dpaddown', 'dpadleft', 'dpadright']) {
+    assert.match(keyMap, new RegExp(`"${action}"`));
+    assert.match(shim, new RegExp(`${action}: 'Arrow`));
+  }
+
+  // Haut ouvre les épisodes d'une série ; les autres flèches ouvrent les
+  // sources au lieu de modifier le volume ou le seek du lecteur tiers.
+  assert.match(external, /event\.key === 'ArrowUp' && onOpenEpisodes/);
+  assert.match(external, /onOpenSources\(\)/);
+  assert.match(movie, /useTvExternalPlayerRemote\(\{/);
+  assert.match(tv, /onOpenEpisodes: openExternalEpisodes/);
+});
+
+test('le menu des saisons et épisodes capture la navigation du lecteur', async () => {
+  const [remote, player, tv] = await Promise.all([
+    read('src/tv/player/useTvPlayerRemote.ts'),
+    read('src/components/HLSPlayer.tsx'),
+    read('src/pages/Watch/WatchTv.tsx'),
+  ]);
+
+  assert.match(remote, /root: '\[data-tv-episode-menu\]'/);
+  for (const source of [player, tv]) {
+    assert.match(source, /data-tv-episode-menu/);
+    assert.match(source, /data-tv-episode-menu-close/);
+  }
+});

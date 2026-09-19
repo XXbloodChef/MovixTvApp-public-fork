@@ -34,6 +34,22 @@ export function buildTvShim(isTv: boolean): string {
     var detail = event && event.detail;
     if (!detail || typeof detail !== 'object') return;
     if (typeof detail.action !== 'string') return;
+    var dpadKeys = {
+      dpadup: 'ArrowUp',
+      dpaddown: 'ArrowDown',
+      dpadleft: 'ArrowLeft',
+      dpadright: 'ArrowRight'
+    };
+    var dpadKey = dpadKeys[detail.action];
+    if (dpadKey) {
+      window.dispatchEvent(new KeyboardEvent('keydown', {
+        key: dpadKey,
+        code: dpadKey,
+        bubbles: true,
+        cancelable: true
+      }));
+      return;
+    }
     window.dispatchEvent(new CustomEvent('movix-tv-remote', {
       detail: { action: detail.action }
     }));

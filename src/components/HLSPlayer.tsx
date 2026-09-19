@@ -12726,6 +12726,7 @@ const HLSPlayer = forwardRef<HLSPlayerRef, HLSPlayerProps>(({
       <AnimatePresence>
         {showInternalEpisodesMenu && episodes && episodes.length > 0 && (
           <motion.div
+            data-tv-episode-menu
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -12736,6 +12737,7 @@ const HLSPlayer = forwardRef<HLSPlayerRef, HLSPlayerProps>(({
             <div className="p-4 border-b border-gray-800 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-white">{showTitle || tvShow?.name || t('watch.episodes')}</h3>
               <button
+                data-tv-episode-menu-close
                 onClick={() => setShowInternalEpisodesMenu(false)}
                 className="text-gray-400 hover:text-white"
               >

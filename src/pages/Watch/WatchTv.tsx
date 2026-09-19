@@ -43,7 +43,11 @@ import {
 } from '../../services/swiftfluxService';
 import type { KisskhSource, KisskhSubtitleTrack } from '../../types/kisskh';
 import { markEpisodeHandoff } from '../../utils/playerFullscreenPersistence';
-const MAIN_API = import.meta.env.VITE_MAIN_API;
+import { MAIN_API } from '../../config/runtime';
+import {
+  isExternalPlayerSource,
+  useTvExternalPlayerRemote,
+} from '../../tv/player/useTvExternalPlayerRemote';
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || '';
 
 // Voir le commentaire jumeau dans HLSPlayer.tsx : on normalise l'hôte de la
@@ -3662,6 +3666,22 @@ const WatchTv: React.FC = () => {
     };
   }, []);
 
+  const openExternalSources = useCallback(() => setShowEmbedQuality(true), []);
+  const openExternalEpisodes = useCallback(() => setShowEpisodesMenu(true), []);
+  const exitExternalPlayer = useCallback(
+    () => navigate(`/tv/${encodeId(id!)}`),
+    [id, navigate],
+  );
+  useTvExternalPlayerRemote({
+    enabled:
+      isTvDevice()
+      && !isLoading
+      && isExternalPlayerSource(selectedSource, embedUrl),
+    onOpenSources: openExternalSources,
+    onOpenEpisodes: openExternalEpisodes,
+    onExit: exitExternalPlayer,
+  });
+
   // Now, after all hooks, you can do conditional returns:
   // Normal/auto replace the whole view with the popup (dialog/auto over the gated
   // black screen). Click-anywhere falls through so the player loads behind the
@@ -4063,6 +4083,7 @@ const WatchTv: React.FC = () => {
           <AnimatePresence>
             {showEpisodesMenu && (
               <motion.div
+                data-tv-episode-menu
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -4072,6 +4093,7 @@ const WatchTv: React.FC = () => {
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-white">{showTitle}</h3>
                   <button
+                    data-tv-episode-menu-close
                     onClick={() => setShowEpisodesMenu(false)}
                     className="text-gray-400 hover:text-white"
                   >

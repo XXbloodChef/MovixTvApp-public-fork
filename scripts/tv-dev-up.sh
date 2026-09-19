@@ -33,7 +33,7 @@
 set -uo pipefail
 
 TV_ADDR="${TV_ADDR:-192.168.1.9:5555}"
-PACKAGE="com.movix.app"
+PACKAGE="com.xxbloodchef.movixtv"
 WATCH_INTERVAL="${WATCH_INTERVAL:-10}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

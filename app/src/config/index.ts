@@ -3,7 +3,7 @@ export const CONFIG = {
   DNS_PRIMARY: '1.1.1.1',
   DNS_SECONDARY: '1.0.0.1',
   DNS_DOH_URL: 'https://cloudflare-dns.com/dns-query',
-  APP_NAME: 'Movix',
+  APP_NAME: 'Movix TV',
   USER_AGENT:
     'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36',
   // Pas de token `Mobile` : c'est lui qui déclenche les layouts téléphone côté
@@ -28,15 +28,16 @@ export const CONFIG = {
 export const DEV_SITE_URL: string | null = 'http://localhost:3000';
 
 export const UPDATE_CHECK = {
+  REPOSITORY_URL: 'https://github.com/XXbloodChef/MovixTvApp-Updates',
   RENTRY_URL: 'https://rentry.co/movix',
-  MANIFEST_PATH: '/app/version.json',
-  GITHUB_VERSION_RAW_PATH: '/raw/refs/heads/main/app/version.json',
+  MANIFEST_PATH: '/version.json',
+  GITHUB_VERSION_RAW_PATH: '/raw/refs/heads/main/version.json',
   TIMEOUT_MS: 5000,
   PENDING_DOWNLOAD_KEY: 'update:pendingDownload',
 };
 
 export const FALLBACK_CONFIG = {
   PRIMARY_URL: 'https://movix.men',
-  GITHUB_URL: 'https://github.com/Movix-STMG/MovixOpenSource',
+  GITHUB_URL: UPDATE_CHECK.REPOSITORY_URL,
   TELEGRAM_URL: 'https://t.me/movix_site',
 };

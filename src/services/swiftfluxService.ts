@@ -19,8 +19,7 @@
 // domaines Movix par `Referer` et le navigateur envoie le bon tout seul.
 import axios from 'axios';
 import { getVipHeaders } from '../utils/vipUtils';
-
-const MAIN_API = import.meta.env.VITE_MAIN_API;
+import { MAIN_API } from '../config/runtime';
 
 export interface SwiftfluxEntry {
   index: number;

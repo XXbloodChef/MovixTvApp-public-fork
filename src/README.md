@@ -32,7 +32,7 @@ un fichier temporaire qui étend `tsconfig.app.json`.
 
 ```text
 src/
-|-- main.tsx                  # Point d'entrée : i18n, cache HTTP, recollage des saisons segmentées, clé VIP en dev
+|-- main.tsx                  # Point d'entrée : i18n, cache HTTP, recollage des saisons segmentées, clé VIP personnelle
 |-- App.tsx                   # Racine : vérification VIP, langue, gestionnaire de 401, fournisseurs, 4 routes
 |-- routing/registry.tsx      # /tvapp/*, /tvapp/diag, /watch/movie/:tmdbid, /watch/tv/:tmdbid/s/:season/e/:episode
 |-- tv/                       # Interface téléviseur
@@ -70,7 +70,8 @@ src/
 - `VITE_PROXIES_EMBED_API` — proxy d'extraction (exige la clé VIP)
 - `VITE_SITE_URL`
 - `VITE_TMDB_API_KEY`
-- `VITE_DEV_ACCESS_CODE` — clé VIP personnelle, posée dans `localStorage['access_code']` **en développement seulement** (`import.meta.env.DEV`) ; un build de production ne l'embarque pas.
+- `VITE_DEV_ACCESS_CODE` — clé VIP locale, utilisée en développement seulement.
+- `VITE_PERSONAL_ACCESS_CODE` — amorçage facultatif d'un build personnel de production ; ne jamais l'utiliser dans une version publique.
 
 Les autres entrées de `.env.example` sont un héritage du site web, sans effet.
 

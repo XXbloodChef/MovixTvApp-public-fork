@@ -14,6 +14,10 @@ const EVENT_NAME = 'MovixTvRemoteKey';
  * plutôt que de faire confiance au payload du bridge.
  */
 const REMOTE_ACTIONS = [
+  'dpadup',
+  'dpaddown',
+  'dpadleft',
+  'dpadright',
   'playpause',
   'play',
   'pause',

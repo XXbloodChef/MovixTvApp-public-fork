@@ -14,7 +14,7 @@ import UpdateDialog from './components/UpdateDialog';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { AddressProvider, useAddress } from './context/AddressContext';
 import { loadNetworkJournalPreference } from './services/networkJournal';
-import { DEV_SITE_URL } from './config';
+import { DEV_SITE_URL, UPDATE_CHECK } from './config';
 
 const { DnsModule } = NativeModules;
 
@@ -115,11 +115,15 @@ export default function App() {
 
 function AppShell({ dnsSettled }: { dnsSettled: boolean }) {
   const { config } = useAddress();
-  // Le court-circuit DEV_SITE_URL ne passe pas par address.json, donc `githubUrl`
-  // retombe sur la valeur codée en dur et la vérification de mise à jour échoue
-  // en 404, avec un bandeau LogBox par-dessus l'interface. Proposer une mise à
-  // jour d'APK n'a de toute façon aucun sens quand on teste un serveur local.
-  const updateSourceUrl = __DEV__ && DEV_SITE_URL ? null : config?.githubUrl ?? null;
+  // Proposer une mise à jour d'APK n'a aucun sens quand on teste le serveur
+  // local : le build debug change à chaque compilation et n'est pas signé avec
+  // la clé de diffusion familiale.
+  // Les domaines du site viennent du portail Movix, mais nos mises à jour ne
+  // doivent jamais repartir vers son dépôt. Le code peut ainsi rester privé :
+  // seul le petit dépôt public d'artefacts expose version.json et l'APK signé.
+  const updateSourceUrl = __DEV__ && DEV_SITE_URL
+    ? null
+    : UPDATE_CHECK.REPOSITORY_URL;
   const { state, accept, dismiss, cancel, openSettings, retry } =
     useAppUpdate(updateSourceUrl);
 

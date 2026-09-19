@@ -223,6 +223,7 @@ class UpdateModule(private val reactContext: ReactApplicationContext) :
 
     // --- Install intent --------------------------------------------------
 
+    @Suppress("DEPRECATION")
     @ReactMethod
     fun installApk(filePath: String, promise: Promise) {
         try {
@@ -240,6 +241,31 @@ class UpdateModule(private val reactContext: ReactApplicationContext) :
                 !file.extension.equals("apk", ignoreCase = true)
             ) {
                 promise.reject("INVALID_APK_PATH", "Invalid APK path")
+                return
+            }
+
+            // Un SHA-256 valide prouve seulement que le fichier correspond au
+            // manifeste. Il faut aussi garantir qu'il met à jour CETTE
+            // application : l'ancien fork utilisait `com.movix.app` et a ainsi
+            // pu installer l'APK téléphone officiel comme une mise à jour.
+            val archiveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                reactContext.packageManager.getPackageArchiveInfo(
+                    file.absolutePath,
+                    PackageManager.PackageInfoFlags.of(0L),
+                )
+            } else {
+                reactContext.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
+            }
+            val archivePackage = archiveInfo?.packageName
+            if (archivePackage == null) {
+                promise.reject("INVALID_APK", "Downloaded file is not a valid APK")
+                return
+            }
+            if (archivePackage != reactContext.packageName) {
+                promise.reject(
+                    "APK_PACKAGE_MISMATCH",
+                    "Refusing APK package $archivePackage; expected ${reactContext.packageName}",
+                )
                 return
             }
 

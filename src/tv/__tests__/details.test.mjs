@@ -412,6 +412,26 @@ test('la transformation est une sortie puis une entrée, jamais un fondu croisé
   assert.match(nav, /\{real \? \(\s*\n\s*GROUP\.map/);
 });
 
+test('le changement de profil est atteignable et piloté par le contexte existant', async () => {
+  const [nav, app, profiles, profileContext] = await Promise.all([
+    read('src/tv/components/TvTopNav.tsx'),
+    read('src/tv/TvApp.tsx'),
+    read('src/tv/TvProfiles.tsx'),
+    read('src/context/ProfileContext.tsx'),
+  ]);
+
+  assert.match(nav, /path: '\/tvapp\/profiles'/);
+  assert.match(nav, /icon: 'profile'/);
+  assert.match(app, /path="\/profiles" element=\{<TvProfiles \/>\}/);
+  assert.match(profiles, /useProfile\(\)/);
+  assert.match(profiles, /await selectProfile\(profile\.id\)/);
+  assert.match(profiles, /orientation: 'grid'/);
+  assert.match(profiles, /neighbors: \{ up: 'nav' \}/);
+  assert.match(profileContext, /localStorage\.getItem\('selected_profile_id'\)/);
+  assert.match(profileContext, /localStorage\.setItem\('selected_profile_id', profileId\)/);
+  assert.match(profileContext, /response\.data\.profiles\.find\(\(p: Profile\) => p\.id === selectedProfileId\)/);
+});
+
 test('chaque page nomme des rangées qui existent vraiment', async () => {
   const [tmdb, browse, home, movies] = await Promise.all([
     read('src/tv/data/tmdb.ts'),
@@ -482,11 +502,13 @@ test('la clé VIP amorce aussi l\'habilitation, pas seulement le code', async ()
   assert.match(resolve, /export function usesServerExtraction\(\)/);
   assert.match(resolve, /if \(!isUserVip\(\)\) return false;/);
 
-  // Les deux entrées s'amorcent ensemble, dans le bloc dev.
-  const dev = main.match(/if \(import\.meta\.env\.DEV\) \{[\s\S]*?\n\}/);
-  assert.ok(dev, 'bloc dev introuvable');
-  assert.match(dev[0], /localStorage\.setItem\('access_code', devAccessCode\)/);
-  assert.match(dev[0], /localStorage\.setItem\('is_vip', 'true'\)/);
+  // Les deux entrées s'amorcent ensemble depuis la clé du build courant : clé
+  // de développement, ou clé personnelle pour un APK privé.
+  assert.match(main, /const bundledAccessCode\s*=/);
+  assert.match(main, /VITE_PERSONAL_ACCESS_CODE/);
+  assert.match(main, /import\.meta\.env\.DEV\s*\?\s*import\.meta\.env\.VITE_DEV_ACCESS_CODE/);
+  assert.match(main, /localStorage\.setItem\('access_code', bundledAccessCode\)/);
+  assert.match(main, /localStorage\.setItem\('is_vip', 'true'\)/);
 
   // Optimiste, jamais autoritaire : le contrôle serveur doit pouvoir retirer
   // ce que le bloc dev a posé, sinon une clé révoquée resterait VIP.

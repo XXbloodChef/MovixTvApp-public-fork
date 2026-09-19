@@ -17,11 +17,15 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
-        applicationId "com.movix.app"
+        // Identité propre à l'application TV. Elle doit rester distincte de
+        // l'APK officiel Movix (`com.movix.app`) pour qu'Android ne puisse
+        // jamais prendre une release téléphone pour une mise à jour de ce
+        // projet.
+        applicationId "com.xxbloodchef.movixtv"
         minSdk rootProject.ext.minSdkVersion
         targetSdk rootProject.ext.targetSdkVersion
-        versionCode 35
-        versionName "2.5.26"
+        versionCode 100
+        versionName "0.1.0"
 
         buildConfigField "int", "VERSION_CODE_INT", "${versionCode}"
         buildConfigField "String", "VERSION_NAME_STR", "\"${versionName}\""
