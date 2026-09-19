@@ -79,7 +79,25 @@ type Axios401Window = Window & { __axios401Set?: boolean; __forceClearInProgress
         // Vérifier si c'est la route /api/admin/check - ne pas déconnecter pour cette route
         const isAdminCheckRoute = fullUrl.includes('/api/admin/check') || urlPart.includes('/api/admin/check');
 
-        // N'appliquer le clear/redirect que pour le domaine API configuré et pas pour /api/admin/check
+        // Une réponse 401 à une requête anonyme signifie souvent « accès VIP
+        // requis », pas « session expirée ». Effacer le stockage et rediriger
+        // l'invité dans ce cas créait une boucle qui empêchait tout le catalogue
+        // TMDB de rester utilisable sans compte. Le composant appelant reçoit
+        // toujours l'erreur et peut proposer le parcours gratuit.
+        const headers = cfg.headers || {};
+        const authorization = headers.Authorization || headers.authorization || '';
+        const hasAuthenticatedSession =
+          Boolean(localStorage.getItem('auth_token')) ||
+          (typeof authorization === 'string' && authorization.startsWith('Bearer '));
+        if (API_HOSTNAME && hostname === API_HOSTNAME && !hasAuthenticatedSession) {
+          window.dispatchEvent(new CustomEvent('movixVipRequired', {
+            detail: { url: fullUrl },
+          }));
+          return Promise.reject(error);
+        }
+
+        // Une vraie session refusée par l'API est expirée : elle seule doit
+        // déclencher l'effacement global et le retour à l'accueil.
         if (API_HOSTNAME && hostname === API_HOSTNAME && !isAdminCheckRoute) {
           // Marquer qu'on est en train de faire un clear forcé pour éviter le sync
           w.__forceClearInProgress = true;
