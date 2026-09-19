@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
@@ -22,16 +22,16 @@ const normalizeSiteUrl = (value?: string): string => {
   }
 }
 
-function injectPublicConfig(): Plugin {
+function injectPublicConfig(env: Record<string, string>): Plugin {
   let siteUrl: string | undefined
 
   const replacePlaceholders = (source: string): string => {
-    const mirrors = (process.env.VITE_DEFAULT_MIRRORS || 'movix.health')
+    const mirrors = (env.VITE_DEFAULT_MIRRORS || 'movix.health')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
     const configUrl =
-      process.env.VITE_MIRRORS_CONFIG_URL || 'https://rentry.co/movix'
+      env.VITE_MIRRORS_CONFIG_URL || 'https://rentry.co/movix'
     return source
       .replace(/__MOVIX_DEFAULT_MIRRORS__/g, JSON.stringify(mirrors))
       .replace(/__MOVIX_CONFIG_URL__/g, JSON.stringify(configUrl))
@@ -42,8 +42,8 @@ function injectPublicConfig(): Plugin {
   }
   return {
     name: 'movix-public-config-inject',
-    configResolved(config) {
-      siteUrl = normalizeSiteUrl(config.env.VITE_SITE_URL)
+    configResolved() {
+      siteUrl = normalizeSiteUrl(env.VITE_SITE_URL)
     },
     transformIndexHtml(html) {
       return replacePlaceholders(html)
@@ -89,12 +89,15 @@ function injectPublicConfig(): Plugin {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+
+  return {
   logLevel: 'warn',
   plugins: [
     react(),
-    injectPublicConfig(),
-    ...(process.env.ANALYZE === 'true'
+    injectPublicConfig(env),
+    ...(env.ANALYZE === 'true'
       ? [
           visualizer({
             filename: 'dist/stats.html',
@@ -111,7 +114,7 @@ export default defineConfig({
     // 3000 par défaut. `PORT` permet d'ouvrir un second serveur de dev en
     // parallèle du premier (deux sessions d'agent, deux branches) sans se
     // disputer le port.
-    port: Number(process.env.PORT) || 3000,
+    port: Number(env.PORT) || 3000,
     hmr: true,
     watch: {
       // Polling utile sur WSL/Docker/FS réseau où inotify/FSEvents ne remontent
@@ -120,7 +123,7 @@ export default defineConfig({
       // qui prend plusieurs minutes + CPU saturé. Override possible avec
       // VITE_USE_POLLING=1 pour ceux qui codent en WSL2 vers un dossier
       // monté sur le FS Windows (cas où linux+polling ne suffit pas).
-      usePolling: process.env.VITE_USE_POLLING === '1' || process.platform === 'linux',
+      usePolling: env.VITE_USE_POLLING === '1' || process.platform === 'linux',
       interval: 100,
       // Exclut tout ce qui n'est PAS source Vite. Sans ça, chokidar passe
       // le démarrage à indexer 150MB d'avatars + le dist + les API Node +
@@ -213,5 +216,6 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
     }
+  }
   }
 })
